@@ -977,7 +977,7 @@ body {
 .status-badge.rejected { background: #f8d7da; color: #721c24; }
 .status-badge.additional_info_required { background: #e2e3e5; color: #383d41; }
 
-/* Tracking Section */
+/* Tracking Section //SAMARA SYS REQ 3.0 */ 
 .track-container {
     max-width: 800px;
     margin: 0 auto;

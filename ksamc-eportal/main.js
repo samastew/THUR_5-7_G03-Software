@@ -18,6 +18,8 @@ function initApp() {
     // Setup event listeners
     setupEventListeners();
 
+    
+
     //NEW SHADELLE
     // Document upload functionality
 document.getElementById('uploadDocsBtn').addEventListener('click', showUploadModal);
@@ -284,12 +286,36 @@ function loadUploadedDocuments() {
     loadDashboardData();
 }
 
+
+
 // Check login status
+function fixMissingEmails() {
+    const apps = JSON.parse(localStorage.getItem('ksamc_apps') || "[]");
+
+    let updated = false;
+
+    apps.forEach(app => {
+        if (!app.email) {
+            // assign email from current user IF applicant matches
+            if (currentUser && app.applicant === currentUser.username) {
+                app.email = currentUser.email;
+                updated = true;
+            }
+        }
+    });
+
+    if (updated) {
+        localStorage.setItem('ksamc_apps', JSON.stringify(apps));
+        console.log(" Missing emails have been added to old applications.");
+    }
+}
+
 function checkLoginStatus() {
     const userData = localStorage.getItem('ksamc_user');
     if (userData) {
         currentUser = JSON.parse(userData);
         updateUIForUser();
+        fixMissingEmails();
         showNotification('Welcome back!', 'success');
     }
 }
@@ -335,6 +361,37 @@ function setupEventListeners() {
     document.getElementById('getStartedBtn').addEventListener('click', showLoginModal);
     document.getElementById('quickUpdateBtn').addEventListener('click', quickUpdateStatus);
     
+    //by joshua
+    // Search button
+    document.querySelector('.btn-search').addEventListener('click', function(e) {
+        e.preventDefault();
+        const searchTerm = document.querySelector('.search-box input').value;
+        if (searchTerm ==="") {
+            renderApplicationsTable(applications);
+            showNotification(`Searching for: ${searchTerm}`, 'info');
+        } else
+        {
+            searchApplications(searchTerm);
+            showNotification(`Filtered results for: ${searchTerm}`, "success")
+        }
+    });
+
+    // by joshua
+    // Status filter
+    //document.getElementById("filterStatus").addEventListener("change", function () {
+      //  const status = this.value;
+
+//        if (status === "") {
+  //          renderApplicationsTable(applications); // show all
+    //        return;
+      //  }
+
+//        const filtered = applications.filter(app => app.status === status);
+  //      renderApplicationsTable(filtered);
+    //});
+
+
+
     // Search and Filter buttons
     document.getElementById('searchBtn').addEventListener('click', function(e) {
         e.preventDefault();
@@ -552,7 +609,7 @@ function updateUIForUser() {
     document.getElementById('loginBtn').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'inline-block';
     
-    // Show/hide admin features
+    // Show/hide admin features // RBAC - SAMARA
     const isStaff = currentUser.role !== 'client';
     document.querySelectorAll('.admin-only').forEach(el => {
         el.style.display = isStaff ? 'block' : 'none';
@@ -667,11 +724,12 @@ function submitApplication(e) {
         return;
     }
     
-    // Generate tracking number
+    // Generate tracking number // SAMARA SYS REQ 3.0
     const trackingNumber = 'KSAMC-' + new Date().getFullYear() + '-' + 
                           String(applications.length + 1).padStart(3, '0');
     
     // Create application object with status history
+    //edited by joshua 12/4/2025
     const newApp = {
         id: Date.now(),
         tracking_number: trackingNumber,
@@ -681,7 +739,7 @@ function submitApplication(e) {
         description: description,
         status: 'received',
         applicant: currentUser.fullName,
-        applicantEmail: currentUser.email,
+        email: currentUser.email,
         date: new Date().toLocaleDateString(),
         last_updated: new Date().toLocaleString(),
         statusHistory: []
@@ -711,7 +769,7 @@ function loadApplications() {
     // Filter applications for current user if not admin
     let userApps = applications;
     if (currentUser && currentUser.role === 'client') {
-        userApps = applications.filter(app => app.applicantEmail === currentUser.email);
+        userApps = applications.filter(app => app.email === currentUser.email);
     }
     
     renderApplicationsTable(userApps);
@@ -732,7 +790,7 @@ function performSearch() {
             app.project_name.toLowerCase().includes(searchTerm) ||
             app.property_address.toLowerCase().includes(searchTerm) ||
             (app.applicant && app.applicant.toLowerCase().includes(searchTerm)) ||
-            (app.applicantEmail && app.applicantEmail.toLowerCase().includes(searchTerm))
+            (app.email && app.email.toLowerCase().includes(searchTerm))
         );
     }
     
@@ -765,7 +823,7 @@ function performSearch() {
     
     // Filter for current user if not admin (client role)
     if (currentUser && currentUser.role === 'client') {
-        filtered = filtered.filter(app => app.applicantEmail === currentUser.email);
+        filtered = filtered.filter(app => app.email === currentUser.email);
     }
     
     renderApplicationsTable(filtered);
@@ -823,7 +881,7 @@ function renderApplicationsTable(appList) {
     });
 }
 
-// Track application
+// Track application - SEARCH 
 function trackApplication() {
     const trackingNumber = document.getElementById('trackInput').value.trim();
     
@@ -906,7 +964,7 @@ function trackApplication() {
     showNotification('Application found. Status history displayed.', 'success');
 }
 
-// Load admin panel
+// Load admin panel RBAC SAMARA
 function loadAdminPanel() {
     if (!currentUser || currentUser.role === 'client') return;
     
@@ -988,6 +1046,19 @@ function updateApplicationStatus() {
         
         // Save back to localStorage
         localStorage.setItem('ksamc_apps', JSON.stringify(applications));
+
+        emailjs.send("service_q2gger7", "template_wq7261d", {
+        tracking: trackingNumber,
+        status: newStatus.replace("_", " "),
+        notes: notes || "No additional notes provided.",
+        recipient_email: applications[appIndex].email   // must exist
+    }).then(() => {
+        showNotification("Email sent successfully!", "success");
+    }).catch((error) => {
+        console.error("EmailJS Error:", error);
+        showNotification("Status updated but email failed to send.", "error");
+        console.log("Full error:", error.status, error.text, error.response);
+    });
         
         // Send notification
         sendNotification(trackingNumber, newStatus, notes || 'Status updated');
@@ -1117,6 +1188,19 @@ function viewApplication(trackingNumber) {
     document.getElementById('trackInput').value = trackingNumber;
     trackApplication();
 }
+
+
+// changed by joshua 12/3/2025
+//function searchApplications(searchTerm) {
+  //const filtered = applications.filter(app =>
+    //    app.tracking_number.toLowerCase().includes(searchTerm) ||
+      //  app.project_name.toLowerCase().includes(searchTerm) ||
+        //app.project_type.toLowerCase().includes(searchTerm) ||
+        //app.status.toLowerCase().includes(searchTerm)
+    //);
+
+    //renderApplicationsTable(filtered);
+//}
 
 // Send notification
 function sendNotification(trackingNumber, status, message) {

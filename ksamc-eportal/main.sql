@@ -1,6 +1,6 @@
--- KSAMC E-Portal Database Schema
--- System Requirement: 6.1 - Centralized document repository
-
+-- KSAMC E-Portal Database 
+-- System Requirement: 6.1 - Centralized document repository 
+-- BY SAMARA
 -- Create database
 CREATE DATABASE IF NOT EXISTS ksamc_portal;
 USE ksamc_portal;
@@ -45,7 +45,7 @@ CREATE TABLE documents (
     FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
 );
 
--- Status history - System Requirement: 3.3 - Status change log
+-- Status history - System Requirement: 3.3 - Status change log // SAMARA
 CREATE TABLE status_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     application_id INT NOT NULL,
@@ -73,7 +73,7 @@ CREATE TABLE notifications (
 -- Add a test application for document upload testing
 INSERT INTO applications (tracking_number, applicant_id, project_name, property_address, project_type) 
 VALUES ('KSAMC-TEST-001', 1, 'Test Project', '123 Test Street', 'residential');
---END SHADELLE CODE
+-- SHADELLE CODE
 
 -- Insert default users for testing
 INSERT INTO users (username, email, password, full_name, role) VALUES

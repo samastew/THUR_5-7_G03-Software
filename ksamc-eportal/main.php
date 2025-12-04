@@ -1,6 +1,7 @@
 <?php
 // KSAMC E-Portal API
 // System Requirement: 2.1.2 - Software interfaces
+//BY SAMARA & JOSHUA
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
@@ -159,7 +160,7 @@ function handleTracking($pdo) {
     ]);
 }
 
-// Admin handler
+// Admin handler - RBAC SAMARA
 function handleAdmin($pdo, $method) {
     if ($method === 'POST') {
         // Update application status - System Requirement: 1.2
